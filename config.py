@@ -13,4 +13,4 @@ osr_split_dir = 'data/ssb_splits'
 # -----------------
 # OTHER PATHS
 # -----------------
-exp_root = 'exps_results' # All logs and checkpoints will be saved here
+exp_root = '/kaggle/working/exps_results' # All logs and checkpoints will be saved here
