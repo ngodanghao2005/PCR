@@ -8,7 +8,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
     --batch_size 128 \
     --grad_from_block 11 \
     --epochs 200 \
-    --num_workers 4 \
+    --num_workers 0 \
     --use_ssb_splits \
     --sup_weight 0.35 \
     --weight_decay 5e-5 \
