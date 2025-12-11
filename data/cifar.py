@@ -48,9 +48,9 @@ def subsample_dataset(dataset, idxs):
 
     if len(idxs) > 0:
 
-        dataset.data = dataset.data[idxs]
+        dataset.data = dataset.data[idxs].copy()
         dataset.targets = np.array(dataset.targets)[idxs].tolist()
-        dataset.uq_idxs = dataset.uq_idxs[idxs]
+        dataset.uq_idxs = dataset.uq_idxs[idxs].copy()
 
         return dataset
 
@@ -103,31 +103,49 @@ def get_cifar_10_datasets(train_transform, test_transform, train_classes=(0, 1, 
     whole_training_set = CustomCIFAR10(root=cifar_10_root, transform=train_transform, train=True, download=True)
 
     # Get labelled training set which has subsampled classes, then subsample some indices from that
-    train_dataset_labelled = subsample_classes(deepcopy(whole_training_set), include_classes=train_classes)
+    # train_dataset_labelled = subsample_classes(deepcopy(whole_training_set), include_classes=train_classes)
+    train_dataset_labelled = CustomCIFAR10(root=cifar_10_root, transform=train_transform, train=True, download=False)
+    train_dataset_labelled = subsample_classes(train_dataset_labelled, include_classes=train_classes)
     subsample_indices = subsample_instances(train_dataset_labelled, prop_indices_to_subsample=prop_train_labels)
     train_dataset_labelled = subsample_dataset(train_dataset_labelled, subsample_indices)
 
     # Split into training and validation sets
     train_idxs, val_idxs = get_train_val_indices(train_dataset_labelled)
-    train_dataset_labelled_split = subsample_dataset(deepcopy(train_dataset_labelled), train_idxs)
-    val_dataset_labelled_split = subsample_dataset(deepcopy(train_dataset_labelled), val_idxs)
-    val_dataset_labelled_split.transform = test_transform
+    # train_dataset_labelled_split = subsample_dataset(deepcopy(train_dataset_labelled), train_idxs)
+    # val_dataset_labelled_split = subsample_dataset(deepcopy(train_dataset_labelled), val_idxs)
+    # val_dataset_labelled_split.transform = test_transform
+    if split_train_val:
+        # Tạo bản sao nhẹ bằng cách gọi lại hàm khởi tạo thay vì nhân bản vùng nhớ đang có
+        train_dataset_labelled_split = CustomCIFAR10(root=cifar_10_root, transform=train_transform, train=True, download=False)
+        train_dataset_labelled_split = subsample_dataset(train_dataset_labelled_split, train_idxs)
+        
+        val_dataset_labelled_split = CustomCIFAR10(root=cifar_10_root, transform=test_transform, train=True, download=False)
+        val_dataset_labelled_split = subsample_dataset(val_dataset_labelled_split, val_idxs)
+    else:
+        train_dataset_labelled_split = train_dataset_labelled
+        val_dataset_labelled_split = None
 
     # Get unlabelled data
-    unlabelled_indices = set(whole_training_set.uq_idxs) - set(train_dataset_labelled.uq_idxs)
-    train_dataset_unlabelled = subsample_dataset(deepcopy(whole_training_set), np.array(list(unlabelled_indices)))
+    # unlabelled_indices = set(whole_training_set.uq_idxs) - set(train_dataset_labelled.uq_idxs)
+    unlabelled_indices = np.array(list(set(whole_training_set.uq_idxs) - set(train_dataset_labelled.uq_idxs)))
+    # train_dataset_unlabelled = subsample_dataset(deepcopy(whole_training_set), np.array(list(unlabelled_indices)))
+    train_dataset_unlabelled = CustomCIFAR10(root=cifar_10_root, transform=train_transform, train=True, download=False)
+    train_dataset_unlabelled = subsample_dataset(train_dataset_unlabelled, unlabelled_indices)
 
     # Get test set for all classes
-    test_dataset = CustomCIFAR10(root=cifar_10_root, transform=test_transform, train=False, download=True)
+    test_dataset = CustomCIFAR10(root=cifar_10_root, transform=test_transform, train=False, download=False)
 
     # Either split train into train and val or use test set as val
-    train_dataset_labelled = train_dataset_labelled_split if split_train_val else train_dataset_labelled
-    val_dataset_labelled = val_dataset_labelled_split if split_train_val else None
+    # train_dataset_labelled = train_dataset_labelled_split if split_train_val else train_dataset_labelled
+    # val_dataset_labelled = val_dataset_labelled_split if split_train_val else None
+    import gc
+    del whole_training_set
+    gc.collect()
 
     all_datasets = {
-        'train_labelled': train_dataset_labelled,
+        'train_labelled': train_dataset_labelled_split,
         'train_unlabelled': train_dataset_unlabelled,
-        'val': val_dataset_labelled,
+        'val': val_dataset_labelled_split,
         'test': test_dataset,
     }
 
